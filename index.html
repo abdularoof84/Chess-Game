@@ -3,15 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>Chess</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="theme-color" content="#1e1c1a">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Chess">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
   :root {
     --light: #f0d9b5;
@@ -140,6 +131,58 @@
     background: var(--accent);
     color: #14200f;
     font-weight: 600;
+  }
+  #puzzle-panel {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    width: min(94vw, 520px);
+    display: none;
+  }
+  #puzzle-panel.show { display: block; }
+  #puzzle-panel h3 { margin: 0 0 10px; font-size: 0.95rem; color: #ddd; }
+  #puzzle-title { font-weight: 700; font-size: 1rem; color: var(--accent); margin-top: 6px; }
+  #puzzle-desc { font-size: 0.88rem; color: #ccc; margin: 4px 0 10px; }
+  #puzzle-status { font-size: 0.85rem; color: #f6d76b; min-height: 20px; margin-top: 4px; }
+  #puzzle-levels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 168px;
+    overflow-y: auto;
+    padding: 4px 2px 10px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #40382f;
+  }
+  .level-btn {
+    background: #4a4038;
+    color: #eee;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .level-btn.active { background: var(--accent); color: #14200f; }
+  .level-btn.solved { background: #3f6b3f; color: #cdf5cd; }
+  .level-btn.solved.active { background: var(--accent); color: #14200f; }
+  #muteBtn { font-size: 0.85rem; }
+  .sq.hint::after {
+    content: '';
+    position: absolute;
+    inset: 6%;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px var(--accent);
+    animation: hint-pulse 1s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes hint-pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.9; }
   }
   #layout {
     display: flex;
@@ -337,6 +380,8 @@
   <button id="localModeBtn" class="active">Local (Same Device)</button>
   <button id="onlineModeBtn">Play Online</button>
   <button id="aiModeBtn">Play vs Computer</button>
+  <button id="puzzleModeBtn">Puzzle Challenges</button>
+  <button id="muteBtn">🔊 Sound On</button>
 </div>
 
 <div id="online-panel">
@@ -396,6 +441,18 @@
     </div>
   </div>
   <div id="ai-status"></div>
+</div>
+
+<div id="puzzle-panel">
+  <h3>Puzzle Challenges — find the checkmate in one!</h3>
+  <div id="puzzle-levels"></div>
+  <div id="puzzle-title"></div>
+  <div id="puzzle-desc"></div>
+  <div class="online-row">
+    <button id="hintBtn">💡 Hint</button>
+    <button class="secondary" id="resetPuzzleBtn">Reset Position</button>
+  </div>
+  <div id="puzzle-status"></div>
 </div>
 
 <div id="layout">
@@ -477,6 +534,19 @@
     thinking: false
   };
 
+  // ---- Puzzle mode state ----
+  const puzzleMode = {
+    active: false,
+    level: 0,
+    solvedLevels: new Set(),
+    solutions: [],
+    hintSquare: null
+  };
+
+  // ---- Sound state ----
+  let soundEnabled = true;
+  let audioCtx = null;
+
   const boardEl = document.getElementById('board');
   const statusEl = document.getElementById('status');
   const filesEl = document.getElementById('files');
@@ -491,6 +561,7 @@
   const endgameTitle = document.getElementById('endgame-title');
   const endgameSub = document.getElementById('endgame-sub');
   const playAgainBtn = document.getElementById('playAgainBtn');
+  const muteBtn = document.getElementById('muteBtn');
 
   const localModeBtn = document.getElementById('localModeBtn');
   const onlineModeBtn = document.getElementById('onlineModeBtn');
@@ -517,6 +588,66 @@
   const leaveAiBtn = document.getElementById('leaveAiBtn');
   const diffBtns = Array.from(document.querySelectorAll('.diff-btn'));
   const colorBtns = Array.from(document.querySelectorAll('.color-btn'));
+
+  const puzzleModeBtn = document.getElementById('puzzleModeBtn');
+  const puzzlePanel = document.getElementById('puzzle-panel');
+  const puzzleLevelsEl = document.getElementById('puzzle-levels');
+  const puzzleTitleEl = document.getElementById('puzzle-title');
+  const puzzleDescEl = document.getElementById('puzzle-desc');
+  const puzzleStatusEl = document.getElementById('puzzle-status');
+  const hintBtn = document.getElementById('hintBtn');
+  const resetPuzzleBtn = document.getElementById('resetPuzzleBtn');
+
+
+  // ---------------- Sound engine (Web Audio, no external files) ----------------
+
+  function getAudioCtx() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  function tone(freq, startTime, duration, type, gainPeak) {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, startTime);
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(gainPeak || 0.18, startTime + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.02);
+  }
+
+  function playSound(kind) {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioCtx();
+      const t = ctx.currentTime;
+      if (kind === 'select') {
+        tone(520, t, 0.06, 'sine', 0.08);
+      } else if (kind === 'move') {
+        tone(300, t, 0.09, 'triangle', 0.16);
+      } else if (kind === 'capture') {
+        tone(220, t, 0.07, 'square', 0.14);
+        tone(160, t + 0.05, 0.09, 'square', 0.12);
+      } else if (kind === 'check') {
+        tone(660, t, 0.09, 'sawtooth', 0.14);
+        tone(880, t + 0.08, 0.12, 'sawtooth', 0.14);
+      } else if (kind === 'win') {
+        [523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.11, 0.22, 'triangle', 0.16));
+      } else if (kind === 'fail') {
+        tone(300, t, 0.14, 'sawtooth', 0.12);
+        tone(220, t + 0.1, 0.18, 'sawtooth', 0.12);
+      }
+    } catch (e) { /* audio not available — fail silently */ }
+  }
 
   function cloneBoard(b) {
     return b.map(row => row.map(cell => cell ? {...cell} : null));
@@ -837,6 +968,212 @@
     makeMove(move.from, move.to, move.meta, promo);
   }
 
+  // ---------------- Puzzle mode: one-move "find the checkmate" challenges ----------------
+
+  const PUZZLES = [
+    { title: "Warm-Up #1", fen: "2k5/8/R1K5/8/8/8/8/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Rook against the lone black king." },
+    { title: "Warm-Up #2", fen: "8/5n2/8/8/2p5/KN5p/3R4/1k6 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Rook and a Knight against a king shielded by a Knight and 2 Pawns." },
+    { title: "Warm-Up #3", fen: "5K1k/8/5R2/8/6B1/8/8/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Rook and a Bishop against the lone black king." },
+    { title: "Warm-Up #4", fen: "6k1/8/6K1/8/8/8/7Q/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen against the lone black king." },
+    { title: "Warm-Up #5", fen: "8/3B1K1k/8/8/8/8/8/R7 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Rook and a Bishop against the lone black king." },
+    { title: "Warm-Up #6", fen: "1R3R2/3k4/8/3K4/8/8/8/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have 2 Rooks against the lone black king." },
+    { title: "Warm-Up #7", fen: "2B5/2p5/8/2K1k3/1Q5p/7p/8/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Bishop against a king shielded by 3 Pawns." },
+    { title: "Warm-Up #8", fen: "5R2/8/8/8/8/5K2/3R4/5k2 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have 2 Rooks against the lone black king." },
+    { title: "Warm-Up #9", fen: "1R5R/k1K5/8/8/8/8/8/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have 2 Rooks against the lone black king." },
+    { title: "Warm-Up #10", fen: "3K4/2B5/1Q6/8/8/8/p2pp3/4k3 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Bishop against a king shielded by 3 Pawns." },
+    { title: "Building Blocks #11", fen: "8/p5K1/5pR1/3Np1R1/p6k/8/8/3B4 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have 2 Rooks, a Bishop and a Knight against a king shielded by 4 Pawns." },
+    { title: "Building Blocks #12", fen: "1Q6/8/1p6/2Bp4/8/8/6p1/2K4k w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Bishop against a king shielded by 3 Pawns." },
+    { title: "Building Blocks #13", fen: "3k4/7R/8/4p2N/6R1/3pp3/6K1/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have 2 Rooks and a Knight against a king shielded by 3 Pawns." },
+    { title: "Building Blocks #14", fen: "8/pp2pp2/7Q/8/8/5K2/6B1/1N2k3 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Bishop and a Knight against a king shielded by 4 Pawns." },
+    { title: "Building Blocks #15", fen: "8/8/6K1/3R4/p7/8/6R1/k7 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have 2 Rooks against a king shielded by a Pawn." },
+    { title: "Building Blocks #16", fen: "7N/8/7k/8/8/1K6/6Q1/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Knight against the lone black king." },
+    { title: "Building Blocks #17", fen: "8/8/8/5K1k/8/3R4/R7/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have 2 Rooks against the lone black king." },
+    { title: "Building Blocks #18", fen: "3R4/8/1p6/3K2p1/p7/n7/Q1R5/7k w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and 2 Rooks against a king shielded by a Knight and 3 Pawns." },
+    { title: "Building Blocks #19", fen: "7k/R1R5/p7/1p3N2/B7/2pp4/6K1/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have 2 Rooks, a Bishop and a Knight against a king shielded by 4 Pawns." },
+    { title: "Building Blocks #20", fen: "8/8/8/6R1/K7/8/7k/Q7 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Rook against the lone black king." },
+    { title: "Sharpen Up #21", fen: "8/4Kp2/8/8/p6k/7p/3B2Q1/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Bishop against a king shielded by 3 Pawns." },
+    { title: "Sharpen Up #22", fen: "8/8/8/4R3/8/6R1/1K6/7k w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have 2 Rooks against the lone black king." },
+    { title: "Sharpen Up #23", fen: "1k6/2R3pp/8/2Qp2b1/8/8/4K3/1N6 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook and a Knight against a king shielded by a Bishop and 3 Pawns." },
+    { title: "Sharpen Up #24", fen: "7k/2p5/5p1K/6p1/7Q/1RB5/8/4N3 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook, a Bishop and a Knight against a king shielded by 3 Pawns." },
+    { title: "Sharpen Up #25", fen: "1k6/7p/1KR2p2/8/8/3p4/5n2/6RQ w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and 2 Rooks against a king shielded by a Knight and 3 Pawns." },
+    { title: "Sharpen Up #26", fen: "6N1/4p2k/1R6/6R1/8/2K1p3/5p2/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have 2 Rooks and a Knight against a king shielded by 3 Pawns." },
+    { title: "Sharpen Up #27", fen: "2Q5/k6p/8/1R6/8/1p6/8/6K1 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Rook against a king shielded by 2 Pawns." },
+    { title: "Sharpen Up #28", fen: "8/K7/p7/1p6/4B3/8/5Qp1/2k5 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Bishop against a king shielded by 3 Pawns." },
+    { title: "Sharpen Up #29", fen: "5Q2/8/1K6/8/k7/8/1R6/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Rook against the lone black king." },
+    { title: "Sharpen Up #30", fen: "2k5/7Q/8/4p3/3RpR1p/7K/3n4/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and 2 Rooks against a king shielded by a Knight and 3 Pawns." },
+    { title: "Real Test #31", fen: "k7/2K5/1Bp5/8/2R5/8/3p4/3Q4 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook and a Bishop against a king shielded by 2 Pawns." },
+    { title: "Real Test #32", fen: "2R5/1Q6/K5p1/7b/2Nkp3/2p5/8/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook and a Knight against a king shielded by a Bishop and 3 Pawns." },
+    { title: "Real Test #33", fen: "K7/4R3/p7/1p6/8/8/2Q5/7k w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Rook against a king shielded by 2 Pawns." },
+    { title: "Real Test #34", fen: "4Q3/6b1/8/1pKN2R1/3p4/8/4p2k/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook and a Knight against a king shielded by a Bishop and 3 Pawns." },
+    { title: "Real Test #35", fen: "5k2/1Q6/3K4/4p3/8/3p3R/8/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Rook against a king shielded by 2 Pawns." },
+    { title: "Real Test #36", fen: "7k/4p3/4p3/1K4R1/1Q6/8/8/2B5 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook and a Bishop against a king shielded by 2 Pawns." },
+    { title: "Real Test #37", fen: "8/1R6/8/8/k7/4Q3/K7/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Rook against the lone black king." },
+    { title: "Real Test #38", fen: "6k1/5R2/8/8/4Q3/5K2/8/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and a Rook against the lone black king." },
+    { title: "Real Test #39", fen: "8/1Rpp2Q1/8/4p3/8/5R2/7K/k5n1 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and 2 Rooks against a king shielded by a Knight and 3 Pawns." },
+    { title: "Real Test #40", fen: "6Q1/8/5pp1/3N1p2/k1B5/8/8/4R2K w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook, a Bishop and a Knight against a king shielded by 3 Pawns." },
+    { title: "Expert Challenge #41", fen: "6k1/8/2N5/4Q1K1/3B2pp/p6p/8/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Bishop and a Knight against a king shielded by 4 Pawns." },
+    { title: "Expert Challenge #42", fen: "7k/1Q6/3K4/2p5/3p3p/3B4/7p/5N2 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Bishop and a Knight against a king shielded by 4 Pawns." },
+    { title: "Expert Challenge #43", fen: "K7/4B3/8/3pp3/4Q3/8/6R1/3k4 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook and a Bishop against a king shielded by 2 Pawns." },
+    { title: "Expert Challenge #44", fen: "2R5/8/3Bp3/4p3/4N3/3p2p1/7R/k4K2 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have 2 Rooks, a Bishop and a Knight against a king shielded by 4 Pawns." },
+    { title: "Expert Challenge #45", fen: "8/8/1p6/8/8/4Q1Bp/1R6/k5K1 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook and a Bishop against a king shielded by 2 Pawns." },
+    { title: "Expert Challenge #46", fen: "8/6QN/3K4/3p3k/pB6/6R1/1p6/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook, a Bishop and a Knight against a king shielded by 3 Pawns." },
+    { title: "Expert Challenge #47", fen: "8/2p1B3/6Q1/8/5R2/8/3p3k/1K6 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook and a Bishop against a king shielded by 2 Pawns." },
+    { title: "Expert Challenge #48", fen: "2RK4/1R4pp/k7/8/4Q3/n7/6p1/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and 2 Rooks against a king shielded by a Knight and 3 Pawns." },
+    { title: "Expert Challenge #49", fen: "7K/4Q3/8/1n3p2/8/1R4p1/2R4p/7k w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen and 2 Rooks against a king shielded by a Knight and 3 Pawns." },
+    { title: "The Ultimate Challenge #50", fen: "k7/2R5/1p6/5Q2/3B3K/1p6/8/8 w - - 0 1",
+      desc: "White to move \u2014 checkmate in one. You have a Queen, a Rook and a Bishop against a king shielded by 2 Pawns." }
+  ];
+
+  function parseFEN(fen) {
+    const [placement, activeColor] = fen.trim().split(/\s+/);
+    const rows = placement.split('/');
+    const board = Array.from({length:8}, () => Array(8).fill(null));
+    for (let r=0;r<8;r++) {
+      let c = 0;
+      for (const ch of rows[r]) {
+        if (/\d/.test(ch)) {
+          c += parseInt(ch, 10);
+        } else {
+          const color = ch === ch.toUpperCase() ? 'w' : 'b';
+          board[r][c] = { type: ch.toUpperCase(), color, moved: true };
+          c++;
+        }
+      }
+    }
+    return { board, turn: activeColor === 'b' ? 'b' : 'w' };
+  }
+
+  function computePuzzleSolutions(board, turn) {
+    const moves = allLegalMovesOnBoard(board, null, turn);
+    const solutions = [];
+    for (const move of moves) {
+      const { board: newBoard, enPassant: newEP } = simulateMove(board, move);
+      const opp = turn === 'w' ? 'b' : 'w';
+      const oppMoves = allLegalMovesOnBoard(newBoard, newEP, opp);
+      if (oppMoves.length === 0 && inCheck(newBoard, opp, newEP)) {
+        solutions.push(move);
+      }
+    }
+    return solutions;
+  }
+
+  function renderPuzzleLevels() {
+    puzzleLevelsEl.innerHTML = '';
+    PUZZLES.forEach((p, idx) => {
+      const n = idx + 1;
+      const btn = document.createElement('button');
+      btn.className = 'level-btn';
+      btn.textContent = puzzleMode.solvedLevels.has(n) ? '✓' : String(n);
+      if (n === puzzleMode.level) btn.classList.add('active');
+      if (puzzleMode.solvedLevels.has(n)) btn.classList.add('solved');
+      btn.addEventListener('click', () => loadPuzzle(n));
+      puzzleLevelsEl.appendChild(btn);
+    });
+  }
+
+  function loadPuzzle(level) {
+    const puzzle = PUZZLES[level - 1];
+    if (!puzzle) return;
+    const { board, turn } = parseFEN(puzzle.fen);
+    state = {
+      board,
+      turn,
+      selected: null,
+      legalMoves: [],
+      history: [],
+      capturedByWhite: [],
+      capturedByBlack: [],
+      enPassant: null,
+      gameOver: false
+    };
+    puzzleMode.level = level;
+    puzzleMode.hintSquare = null;
+    puzzleMode.solutions = computePuzzleSolutions(board, turn);
+    puzzleTitleEl.textContent = `Level ${level}: ${puzzle.title}`;
+    puzzleDescEl.textContent = puzzle.desc;
+    puzzleStatusEl.textContent = '';
+    hideEndgameOverlay();
+    renderPuzzleLevels();
+    render();
+  }
+
+  function handlePuzzleMoveResult(wasCheckmate) {
+    if (wasCheckmate) {
+      puzzleMode.solvedLevels.add(puzzleMode.level);
+      renderPuzzleLevels();
+    } else {
+      playSound('fail');
+      puzzleStatusEl.textContent = "Not quite — that doesn't deliver checkmate. Resetting…";
+      const levelToReload = puzzleMode.level;
+      setTimeout(() => {
+        if (puzzleMode.active && puzzleMode.level === levelToReload) loadPuzzle(levelToReload);
+      }, 900);
+    }
+  }
+
+  function showPuzzleHint() {
+    if (!puzzleMode.solutions.length) return;
+    puzzleMode.hintSquare = puzzleMode.solutions[0].from;
+    puzzleStatusEl.textContent = 'Hint: the winning move starts from the highlighted square.';
+    render();
+  }
+
+  function leavePuzzleMode() {
+    puzzleMode.active = false;
+    puzzleStatusEl.textContent = '';
+    hideEndgameOverlay();
+    newGame(true);
+  }
+
   function makeMove(from, to, moveMeta, promotionChoice) {
     const piece = state.board[from.r][from.c];
     const options = {};
@@ -899,7 +1236,17 @@
 
     if (checkmate || stalemate) state.gameOver = true;
 
+    if (checkmate) playSound('win');
+    else if (nextInCheck) playSound('check');
+    else if (wasCapture) playSound('capture');
+    else playSound('move');
+
     render();
+
+    if (puzzleMode.active) {
+      handlePuzzleMoveResult(checkmate);
+      return;
+    }
 
     if (net.active && !net.applyingRemote) {
       pushStateToRoom();
@@ -935,6 +1282,8 @@
       if (piece && piece.color === state.turn && (!net.active || piece.color === net.myColor)) {
         state.selected = {r,c};
         state.legalMoves = legalMovesFor(r,c);
+        puzzleMode.hintSquare = null;
+        playSound('select');
         render();
         return;
       }
@@ -947,6 +1296,8 @@
     if (piece && piece.color === state.turn && (!net.active || piece.color === net.myColor)) {
       state.selected = {r,c};
       state.legalMoves = legalMovesFor(r,c);
+      puzzleMode.hintSquare = null;
+      playSound('select');
       render();
     }
   }
@@ -972,15 +1323,27 @@
   }
 
   function showEndgameOverlay(last) {
+    if (puzzleMode.active) {
+      if (last && last.checkmate) {
+        endgameTitle.textContent = 'Puzzle Solved!';
+        endgameTitle.classList.remove('draw');
+        endgameSub.textContent = '🎉 Congratulations — nicely spotted! 🎉';
+        playAgainBtn.textContent = puzzleMode.level < PUZZLES.length ? 'Next Puzzle' : 'Replay';
+        endgameOverlay.classList.add('show');
+      }
+      return;
+    }
     if (last && last.checkmate) {
       const winner = winnerLabel(last.color);
-      endgameTitle.textContent = 'Checkmate!';
       endgameTitle.classList.remove('draw');
       if (winner === 'You') {
+        endgameTitle.textContent = 'Checkmate!';
         endgameSub.textContent = '🎉 Congratulations, you win! 🎉';
       } else if (winner === 'Your opponent' || winner === 'The computer') {
-        endgameSub.textContent = `🎉 Congratulations to ${winner === 'The computer' ? 'the computer' : 'your opponent'} — better luck next time!`;
+        endgameTitle.textContent = 'Defeat';
+        endgameSub.textContent = `${winner === 'The computer' ? 'The computer' : 'Your opponent'} wins this time — better luck next round!`;
       } else {
+        endgameTitle.textContent = 'Checkmate!';
         endgameSub.textContent = `🎉 Congratulations, ${winner}! 🎉`;
       }
     } else {
@@ -988,6 +1351,7 @@
       endgameTitle.classList.add('draw');
       endgameSub.textContent = "It's a draw — well played both sides.";
     }
+    playAgainBtn.textContent = 'Play Again';
     endgameOverlay.classList.add('show');
   }
 
@@ -1006,6 +1370,7 @@
         sq.className = 'sq ' + ((r+c)%2===0 ? 'light' : 'dark');
         if (state.selected && state.selected.r===r && state.selected.c===c) sq.classList.add('selected');
         if (kingInCheckPos && kingInCheckPos.r===r && kingInCheckPos.c===c) sq.classList.add('check');
+        if (puzzleMode.hintSquare && puzzleMode.hintSquare.r===r && puzzleMode.hintSquare.c===c) sq.classList.add('hint');
 
         const piece = state.board[r][c];
         if (piece) {
@@ -1072,8 +1437,8 @@
     }
     document.getElementById('history').scrollTop = document.getElementById('history').scrollHeight;
 
-    undoBtn.disabled = net.active || ai.active;
-    newGameBtn.textContent = net.active ? 'Resign / Reset' : 'New Game';
+    undoBtn.disabled = net.active || ai.active || puzzleMode.active;
+    newGameBtn.textContent = net.active ? 'Resign / Reset' : (puzzleMode.active ? 'Reset Position' : 'New Game');
   }
 
   function newGame(skipNet) {
@@ -1345,34 +1710,53 @@
   function resetPanels() {
     onlinePanel.classList.remove('show');
     aiPanel.classList.remove('show');
+    puzzlePanel.classList.remove('show');
     if (net.active) leaveOnline();
     if (ai.active) leaveAiGame();
+    if (puzzleMode.active) leavePuzzleMode();
+  }
+
+  function setActiveModeBtn(activeBtn) {
+    [localModeBtn, onlineModeBtn, aiModeBtn, puzzleModeBtn].forEach(b => b.classList.remove('active'));
+    activeBtn.classList.add('active');
   }
 
   localModeBtn.addEventListener('click', () => {
-    localModeBtn.classList.add('active');
-    onlineModeBtn.classList.remove('active');
-    aiModeBtn.classList.remove('active');
+    setActiveModeBtn(localModeBtn);
     resetPanels();
   });
 
   onlineModeBtn.addEventListener('click', () => {
     if (ai.active) leaveAiGame();
+    if (puzzleMode.active) leavePuzzleMode();
     aiPanel.classList.remove('show');
-    onlineModeBtn.classList.add('active');
-    localModeBtn.classList.remove('active');
-    aiModeBtn.classList.remove('active');
+    puzzlePanel.classList.remove('show');
+    setActiveModeBtn(onlineModeBtn);
     onlinePanel.classList.add('show');
   });
 
   aiModeBtn.addEventListener('click', () => {
     if (net.active) leaveOnline();
+    if (puzzleMode.active) leavePuzzleMode();
     onlinePanel.classList.remove('show');
-    aiModeBtn.classList.add('active');
-    localModeBtn.classList.remove('active');
-    onlineModeBtn.classList.remove('active');
+    puzzlePanel.classList.remove('show');
+    setActiveModeBtn(aiModeBtn);
     aiPanel.classList.add('show');
   });
+
+  puzzleModeBtn.addEventListener('click', () => {
+    if (net.active) leaveOnline();
+    if (ai.active) leaveAiGame();
+    onlinePanel.classList.remove('show');
+    aiPanel.classList.remove('show');
+    setActiveModeBtn(puzzleModeBtn);
+    puzzlePanel.classList.add('show');
+    puzzleMode.active = true;
+    loadPuzzle(puzzleMode.level || 1);
+  });
+
+  hintBtn.addEventListener('click', showPuzzleHint);
+  resetPuzzleBtn.addEventListener('click', () => loadPuzzle(puzzleMode.level));
 
   createRoomBtn.addEventListener('click', createRoom);
   joinRoomBtn.addEventListener('click', joinRoom);
@@ -1380,6 +1764,7 @@
   leaveRoomBtn.addEventListener('click', leaveOnline);
 
   newGameBtn.addEventListener('click', () => {
+    if (puzzleMode.active) { loadPuzzle(puzzleMode.level); return; }
     if (ai.active) { newGame(true); return; }
     newGame(false);
   });
@@ -1387,18 +1772,23 @@
 
   playAgainBtn.addEventListener('click', () => {
     hideEndgameOverlay();
+    if (puzzleMode.active) {
+      const next = puzzleMode.level < PUZZLES.length ? puzzleMode.level + 1 : puzzleMode.level;
+      loadPuzzle(next);
+      return;
+    }
     if (ai.active) { newGame(true); return; }
     newGame(false);
   });
 
+  muteBtn.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    muteBtn.textContent = soundEnabled ? '🔊 Sound On' : '🔇 Muted';
+    if (soundEnabled) { getAudioCtx(); playSound('select'); }
+  });
+
   render();
 })();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(() => {});
-  });
-}
 </script>
 </body>
 </html>
