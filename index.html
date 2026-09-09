@@ -33,23 +33,155 @@
     font-size: 1.6rem;
   }
   #mode-bar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
+    display: none;
   }
-  #mode-bar button {
+
+  /* ---- Name modal ---- */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    padding: 16px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-card {
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 28px 26px;
+    text-align: center;
+    max-width: 340px;
+    width: 100%;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  }
+  .modal-card h2 { margin: 0 0 6px; font-size: 1.3rem; }
+  .modal-card p { margin: 0 0 14px; color: #bbb; font-size: 0.9rem; }
+  .modal-card input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #555;
+    background: #14120f;
+    color: #eee;
+    font-size: 1rem;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .modal-card button {
+    background: var(--accent);
+    color: #14200f;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  /* ---- Main menu screen ---- */
+  #screen-menu {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 380px;
+    margin-top: 6vh;
+  }
+  #screen-menu.show { display: flex; }
+  #screen-menu h1 { margin-bottom: 4px; }
+  #menu-greeting {
+    color: var(--accent);
+    font-size: 1rem;
+    margin-bottom: 28px;
+  }
+  #menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+  .menu-btn {
     background: #4a4038;
     color: #eee;
     border: none;
-    padding: 8px 16px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 1.02rem;
+    font-weight: 600;
+    text-align: left;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+  }
+  .menu-btn:hover { background: #5c5045; }
+  #menu-toggles {
+    display: flex;
+    gap: 10px;
+    margin-top: 26px;
+  }
+  #menu-toggles button {
+    background: #322d27;
+    color: #ccc;
+    border: none;
+    padding: 8px 14px;
     border-radius: 20px;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
   }
-  #mode-bar button.active {
-    background: var(--accent);
-    color: #14200f;
-    font-weight: 600;
+
+  /* ---- Game screen wrapper ---- */
+  #screen-game {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  #screen-game.show { display: flex; }
+  #game-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: min(94vw, 520px);
+    margin-bottom: 12px;
+  }
+  #game-topbar button {
+    background: #4a4038;
+    color: #eee;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    margin: 0;
+  }
+  #game-timer {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: #14120f;
+    padding: 6px 14px;
+    border-radius: 8px;
+    letter-spacing: 1px;
+  }
+  #pause-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10,9,8,0.82);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 6;
+    border-radius: 4px;
+  }
+  #pause-overlay.show { display: flex; }
+  #pause-card {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 2px;
   }
   #online-panel {
     background: var(--panel);
@@ -148,25 +280,45 @@
   #puzzle-levels {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
-    max-height: 168px;
-    overflow-y: auto;
-    padding: 4px 2px 10px;
-    margin-bottom: 4px;
+    gap: 6px;
+    padding: 4px 2px;
+    flex: 1;
+    justify-content: center;
+  }
+  #puzzle-pager {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     border-bottom: 1px solid #40382f;
+    padding-bottom: 10px;
+    margin-bottom: 4px;
+  }
+  #puzzle-pager button.secondary {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  #puzzle-page-label {
+    text-align: center;
+    font-size: 0.78rem;
+    color: #999;
+    margin-bottom: 8px;
   }
   .level-btn {
     background: #4a4038;
     color: #eee;
     border: none;
-    width: 30px;
-    height: 30px;
-    border-radius: 6px;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 0.78rem;
+    font-size: 0.85rem;
     font-weight: 600;
     flex-shrink: 0;
   }
+  .level-btn.locked { background: #33302b; color: #666; cursor: not-allowed; }
   .level-btn.active { background: var(--accent); color: #14200f; }
   .level-btn.solved { background: #3f6b3f; color: #cdf5cd; }
   .level-btn.solved.active { background: var(--accent); color: #14200f; }
@@ -374,109 +526,139 @@
 </style>
 </head>
 <body>
-<h1>♞ Chess ♞</h1>
-
-<div id="mode-bar">
-  <button id="localModeBtn" class="active">Local (Same Device)</button>
-  <button id="onlineModeBtn">Play Online</button>
-  <button id="aiModeBtn">Play vs Computer</button>
-  <button id="puzzleModeBtn">Puzzle Challenges</button>
-  <button id="muteBtn">🔊 Sound On</button>
+<div id="name-modal" class="modal-overlay">
+  <div class="modal-card">
+    <h2>♞ Welcome to Chess ♞</h2>
+    <p>What should we call you?</p>
+    <input id="nameInput" placeholder="Your name" maxlength="18">
+    <button id="nameSubmitBtn">Start Playing</button>
+  </div>
 </div>
 
-<div id="online-panel">
-  <div id="online-create-join">
-    <h3>Play with a friend online</h3>
-    <div class="online-row">
-      <button id="createRoomBtn">Create Room</button>
-      <span style="color:#999; font-size:0.85rem;">— get a code to send them</span>
-    </div>
-    <div class="online-row">
-      <input id="joinCodeInput" placeholder="Enter code" maxlength="6">
-      <button id="joinRoomBtn">Join Room</button>
-    </div>
+<div id="screen-menu">
+  <h1>♞ Chess ♞</h1>
+  <div id="menu-greeting"></div>
+  <div id="menu-buttons">
+    <button class="menu-btn" data-mode="local">👥 Local (Same Device)</button>
+    <button class="menu-btn" data-mode="online">🌐 Play Online</button>
+    <button class="menu-btn" data-mode="ai">🤖 Play vs Computer</button>
+    <button class="menu-btn" data-mode="puzzle">🧩 Puzzle Challenges</button>
   </div>
-  <div id="online-waiting" style="display:none;">
-    <h3>Share this code with your friend</h3>
-    <div id="room-code-display"></div>
-    <div class="online-row">
-      <button class="secondary" id="cancelRoomBtn">Cancel</button>
-    </div>
+  <div id="menu-toggles">
+    <button id="muteBtn">🔊 Sound On</button>
+    <button id="musicBtn">🎵 Music On</button>
   </div>
-  <div id="online-connected" style="display:none;">
-    <div class="online-row">
-      <span id="connected-info" style="font-size:0.9rem;"></span>
-      <button class="secondary" id="leaveRoomBtn">Leave Game</button>
-    </div>
-  </div>
-  <div id="online-status"></div>
 </div>
 
-<div id="ai-panel">
-  <div id="ai-setup">
-    <h3>Play against the computer</h3>
-    <div class="online-row">
-      <span style="font-size:0.85rem; color:#bbb; width:100%;">Difficulty</span>
-    </div>
-    <div class="online-row">
-      <button class="diff-btn" data-diff="easy">Easy</button>
-      <button class="diff-btn active" data-diff="medium">Medium</button>
-      <button class="diff-btn" data-diff="hard">Hard</button>
-    </div>
-    <div class="online-row">
-      <span style="font-size:0.85rem; color:#bbb; width:100%;">You play as</span>
-    </div>
-    <div class="online-row">
-      <button class="color-btn active" data-color="w">White</button>
-      <button class="color-btn" data-color="b">Black</button>
-    </div>
-    <div class="online-row">
-      <button id="startAiBtn">Start Game</button>
-    </div>
+<div id="screen-game">
+  <div id="game-topbar">
+    <button id="backToMenuBtn">⬅ Menu</button>
+    <div id="game-timer">⏱ 00:00</div>
+    <button id="pauseBtn">⏸ Pause</button>
   </div>
-  <div id="ai-playing" style="display:none;">
-    <div class="online-row">
-      <span id="ai-info" style="font-size:0.9rem;"></span>
-      <button class="secondary" id="leaveAiBtn">End Game</button>
-    </div>
-  </div>
-  <div id="ai-status"></div>
-</div>
 
-<div id="puzzle-panel">
-  <h3>Puzzle Challenges — find the checkmate in one!</h3>
-  <div id="puzzle-levels"></div>
-  <div id="puzzle-title"></div>
-  <div id="puzzle-desc"></div>
-  <div class="online-row">
-    <button id="hintBtn">💡 Hint</button>
-    <button class="secondary" id="resetPuzzleBtn">Reset Position</button>
-  </div>
-  <div id="puzzle-status"></div>
-</div>
-
-<div id="layout">
-  <div id="board-wrap">
-    <div id="board"></div>
-    <div class="coords" id="files"></div>
-    <div id="endgame-overlay">
-      <div id="endgame-card">
-        <div id="endgame-title"></div>
-        <div id="endgame-sub"></div>
-        <button id="playAgainBtn">Play Again</button>
+  <div id="online-panel">
+    <div id="online-create-join">
+      <h3>Play with a friend online</h3>
+      <div class="online-row">
+        <button id="createRoomBtn">Create Room</button>
+        <span style="color:#999; font-size:0.85rem;">— get a code to send them</span>
+      </div>
+      <div class="online-row">
+        <input id="joinCodeInput" placeholder="Enter code" maxlength="6">
+        <button id="joinRoomBtn">Join Room</button>
       </div>
     </div>
+    <div id="online-waiting" style="display:none;">
+      <h3>Share this code with your friend</h3>
+      <div id="room-code-display"></div>
+      <div class="online-row">
+        <button class="secondary" id="cancelRoomBtn">Cancel</button>
+      </div>
+    </div>
+    <div id="online-connected" style="display:none;">
+      <div class="online-row">
+        <span id="connected-info" style="font-size:0.9rem;"></span>
+        <button class="secondary" id="leaveRoomBtn">Leave Game</button>
+      </div>
+    </div>
+    <div id="online-status"></div>
   </div>
-  <div id="panel">
-    <div id="status" class="white">White to move</div>
-    <button id="newGameBtn">New Game</button>
-    <button id="undoBtn">Undo</button>
-    <h3 class="panel-h">Captured by White</h3>
-    <div id="captured-white"></div>
-    <h3 class="panel-h">Captured by Black</h3>
-    <div id="captured-black"></div>
-    <h3 class="panel-h">Move History</h3>
-    <div id="history"><table id="history-table"></table></div>
+
+  <div id="ai-panel">
+    <div id="ai-setup">
+      <h3>Play against the computer</h3>
+      <div class="online-row">
+        <span style="font-size:0.85rem; color:#bbb; width:100%;">Difficulty</span>
+      </div>
+      <div class="online-row">
+        <button class="diff-btn" data-diff="easy">Easy</button>
+        <button class="diff-btn active" data-diff="medium">Medium</button>
+        <button class="diff-btn" data-diff="hard">Hard</button>
+      </div>
+      <div class="online-row">
+        <span style="font-size:0.85rem; color:#bbb; width:100%;">You play as</span>
+      </div>
+      <div class="online-row">
+        <button class="color-btn active" data-color="w">White</button>
+        <button class="color-btn" data-color="b">Black</button>
+      </div>
+      <div class="online-row">
+        <button id="startAiBtn">Start Game</button>
+      </div>
+    </div>
+    <div id="ai-playing" style="display:none;">
+      <div class="online-row">
+        <span id="ai-info" style="font-size:0.9rem;"></span>
+        <button class="secondary" id="leaveAiBtn">End Game</button>
+      </div>
+    </div>
+    <div id="ai-status"></div>
+  </div>
+
+  <div id="puzzle-panel">
+    <h3>Puzzle Challenges — find the checkmate in one!</h3>
+    <div id="puzzle-pager">
+      <button id="puzzlePrevBtn" class="secondary">‹</button>
+      <div id="puzzle-levels"></div>
+      <button id="puzzleNextBtn" class="secondary">›</button>
+    </div>
+    <div id="puzzle-page-label"></div>
+    <div id="puzzle-title"></div>
+    <div id="puzzle-desc"></div>
+    <div class="online-row">
+      <button id="hintBtn">💡 Hint</button>
+      <button class="secondary" id="resetPuzzleBtn">Reset Position</button>
+    </div>
+    <div id="puzzle-status"></div>
+  </div>
+
+  <div id="layout">
+    <div id="board-wrap">
+      <div id="board"></div>
+      <div class="coords" id="files"></div>
+      <div id="endgame-overlay">
+        <div id="endgame-card">
+          <div id="endgame-title"></div>
+          <div id="endgame-sub"></div>
+          <button id="playAgainBtn">Play Again</button>
+        </div>
+      </div>
+      <div id="pause-overlay">
+        <div id="pause-card">⏸ Paused</div>
+      </div>
+    </div>
+    <div id="panel">
+      <div id="status" class="white">White to move</div>
+      <button id="newGameBtn">New Game</button>
+      <button id="undoBtn">Undo</button>
+      <h3 class="panel-h">Captured by White</h3>
+      <div id="captured-white"></div>
+      <h3 class="panel-h">Captured by Black</h3>
+      <div id="captured-black"></div>
+      <h3 class="panel-h">Move History</h3>
+      <div id="history"><table id="history-table"></table></div>
+    </div>
   </div>
 </div>
 
@@ -538,14 +720,41 @@
   const puzzleMode = {
     active: false,
     level: 0,
+    page: 0,
     solvedLevels: new Set(),
+    unlockedLevel: 1,
     solutions: [],
     hintSquare: null
   };
+  const PUZZLES_PER_PAGE = 10;
 
-  // ---- Sound state ----
+  // ---- Sound / music state ----
   let soundEnabled = true;
+  let musicEnabled = true;
   let audioCtx = null;
+  let musicTimer = null;
+  let musicStep = 0;
+
+  // ---- Persistence helpers (survive until the app/browser data is cleared) ----
+  function lsGet(key, fallback) {
+    try {
+      const v = localStorage.getItem(key);
+      return v === null ? fallback : JSON.parse(v);
+    } catch (e) { return fallback; }
+  }
+  function lsSet(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* ignore */ }
+  }
+
+  let playerName = lsGet('chessPlayerName', null);
+  soundEnabled = lsGet('chessSoundEnabled', true);
+  musicEnabled = lsGet('chessMusicEnabled', true);
+  puzzleMode.unlockedLevel = lsGet('chessPuzzleUnlocked', 1);
+  puzzleMode.solvedLevels = new Set(lsGet('chessPuzzleSolved', []));
+
+  // ---- Timer state ----
+  const gameTimer = { seconds: 0, intervalId: null, running: false };
+  let paused = false;
 
   const boardEl = document.getElementById('board');
   const statusEl = document.getElementById('status');
@@ -562,9 +771,20 @@
   const endgameSub = document.getElementById('endgame-sub');
   const playAgainBtn = document.getElementById('playAgainBtn');
   const muteBtn = document.getElementById('muteBtn');
+  const musicBtn = document.getElementById('musicBtn');
 
-  const localModeBtn = document.getElementById('localModeBtn');
-  const onlineModeBtn = document.getElementById('onlineModeBtn');
+  const nameModal = document.getElementById('name-modal');
+  const nameInput = document.getElementById('nameInput');
+  const nameSubmitBtn = document.getElementById('nameSubmitBtn');
+  const screenMenu = document.getElementById('screen-menu');
+  const screenGame = document.getElementById('screen-game');
+  const menuGreeting = document.getElementById('menu-greeting');
+  const menuBtns = Array.from(document.querySelectorAll('.menu-btn'));
+  const backToMenuBtn = document.getElementById('backToMenuBtn');
+  const gameTimerEl = document.getElementById('game-timer');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const pauseOverlay = document.getElementById('pause-overlay');
+
   const onlinePanel = document.getElementById('online-panel');
   const onlineCreateJoin = document.getElementById('online-create-join');
   const onlineWaiting = document.getElementById('online-waiting');
@@ -578,7 +798,6 @@
   const cancelRoomBtn = document.getElementById('cancelRoomBtn');
   const leaveRoomBtn = document.getElementById('leaveRoomBtn');
 
-  const aiModeBtn = document.getElementById('aiModeBtn');
   const aiPanel = document.getElementById('ai-panel');
   const aiSetup = document.getElementById('ai-setup');
   const aiPlaying = document.getElementById('ai-playing');
@@ -589,12 +808,14 @@
   const diffBtns = Array.from(document.querySelectorAll('.diff-btn'));
   const colorBtns = Array.from(document.querySelectorAll('.color-btn'));
 
-  const puzzleModeBtn = document.getElementById('puzzleModeBtn');
   const puzzlePanel = document.getElementById('puzzle-panel');
   const puzzleLevelsEl = document.getElementById('puzzle-levels');
   const puzzleTitleEl = document.getElementById('puzzle-title');
   const puzzleDescEl = document.getElementById('puzzle-desc');
   const puzzleStatusEl = document.getElementById('puzzle-status');
+  const puzzlePageLabel = document.getElementById('puzzle-page-label');
+  const puzzlePrevBtn = document.getElementById('puzzlePrevBtn');
+  const puzzleNextBtn = document.getElementById('puzzleNextBtn');
   const hintBtn = document.getElementById('hintBtn');
   const resetPuzzleBtn = document.getElementById('resetPuzzleBtn');
 
@@ -647,6 +868,102 @@
         tone(220, t + 0.1, 0.18, 'sawtooth', 0.12);
       }
     } catch (e) { /* audio not available — fail silently */ }
+  }
+
+  // ---------------- Soft ambient background music (generative, no external files) ----------------
+
+  const MUSIC_CHORDS = [
+    [261.63, 329.63, 392.00],   // C major
+    [220.00, 277.18, 329.63],   // A minor
+    [174.61, 220.00, 261.63],   // F major
+    [196.00, 246.94, 293.66]    // G major
+  ];
+
+  function scheduleMusicStep() {
+    if (!musicEnabled) { musicTimer = null; return; }
+    try {
+      const ctx = getAudioCtx();
+      const t = ctx.currentTime + 0.05;
+      const chord = MUSIC_CHORDS[musicStep % MUSIC_CHORDS.length];
+      const barLength = 4.2;
+      chord.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq / 2, t);
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.028, t + 1.2);
+        gain.gain.linearRampToValueAtTime(0.02, t + barLength - 1.2);
+        gain.gain.linearRampToValueAtTime(0, t + barLength);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + barLength + 0.1);
+      });
+      musicStep++;
+      musicTimer = setTimeout(scheduleMusicStep, barLength * 1000);
+    } catch (e) { musicTimer = null; }
+  }
+
+  function startMusic() {
+    if (!musicEnabled || musicTimer) return;
+    musicStep = 0;
+    scheduleMusicStep();
+  }
+
+  function stopMusic() {
+    if (musicTimer) { clearTimeout(musicTimer); musicTimer = null; }
+  }
+
+  // ---------------- Game timer ----------------
+
+  function formatTime(totalSeconds) {
+    const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+    const s = (totalSeconds % 60).toString().padStart(2, '0');
+    return `⏱ ${m}:${s}`;
+  }
+
+  function tickTimer() {
+    gameTimer.seconds++;
+    gameTimerEl.textContent = formatTime(gameTimer.seconds);
+  }
+
+  function startTimer() {
+    stopTimer();
+    gameTimer.seconds = 0;
+    gameTimerEl.textContent = formatTime(0);
+    gameTimer.running = true;
+    gameTimer.intervalId = setInterval(tickTimer, 1000);
+  }
+
+  function stopTimer() {
+    if (gameTimer.intervalId) clearInterval(gameTimer.intervalId);
+    gameTimer.intervalId = null;
+    gameTimer.running = false;
+  }
+
+  function pauseTimer() {
+    if (gameTimer.intervalId) clearInterval(gameTimer.intervalId);
+    gameTimer.intervalId = null;
+  }
+
+  function resumeTimer() {
+    if (!gameTimer.intervalId) {
+      gameTimer.intervalId = setInterval(tickTimer, 1000);
+    }
+  }
+
+  function togglePause() {
+    paused = !paused;
+    if (paused) {
+      pauseTimer();
+      pauseOverlay.classList.add('show');
+      pauseBtn.textContent = '▶ Resume';
+    } else {
+      resumeTimer();
+      pauseOverlay.classList.remove('show');
+      pauseBtn.textContent = '⏸ Pause';
+    }
   }
 
   function cloneBoard(b) {
@@ -1108,21 +1425,42 @@
 
   function renderPuzzleLevels() {
     puzzleLevelsEl.innerHTML = '';
-    PUZZLES.forEach((p, idx) => {
+    const start = puzzleMode.page * PUZZLES_PER_PAGE;
+    const end = Math.min(start + PUZZLES_PER_PAGE, PUZZLES.length);
+    for (let idx = start; idx < end; idx++) {
       const n = idx + 1;
+      const locked = n > puzzleMode.unlockedLevel;
       const btn = document.createElement('button');
       btn.className = 'level-btn';
-      btn.textContent = puzzleMode.solvedLevels.has(n) ? '✓' : String(n);
+      if (locked) {
+        btn.classList.add('locked');
+        btn.textContent = '🔒';
+      } else {
+        btn.textContent = puzzleMode.solvedLevels.has(n) ? '✓' : String(n);
+      }
       if (n === puzzleMode.level) btn.classList.add('active');
       if (puzzleMode.solvedLevels.has(n)) btn.classList.add('solved');
-      btn.addEventListener('click', () => loadPuzzle(n));
+      if (!locked) btn.addEventListener('click', () => loadPuzzle(n));
       puzzleLevelsEl.appendChild(btn);
-    });
+    }
+    const totalPages = Math.ceil(PUZZLES.length / PUZZLES_PER_PAGE);
+    puzzlePageLabel.textContent = `Levels ${start + 1}–${end} of ${PUZZLES.length} (page ${puzzleMode.page + 1}/${totalPages})`;
+    puzzlePrevBtn.disabled = puzzleMode.page === 0;
+    puzzleNextBtn.disabled = puzzleMode.page >= totalPages - 1;
+  }
+
+  function changePuzzlePage(delta) {
+    const totalPages = Math.ceil(PUZZLES.length / PUZZLES_PER_PAGE);
+    const next = puzzleMode.page + delta;
+    if (next < 0 || next >= totalPages) return;
+    puzzleMode.page = next;
+    renderPuzzleLevels();
   }
 
   function loadPuzzle(level) {
     const puzzle = PUZZLES[level - 1];
     if (!puzzle) return;
+    if (level > puzzleMode.unlockedLevel) return; // locked
     const { board, turn } = parseFEN(puzzle.fen);
     state = {
       board,
@@ -1136,6 +1474,7 @@
       gameOver: false
     };
     puzzleMode.level = level;
+    puzzleMode.page = Math.floor((level - 1) / PUZZLES_PER_PAGE);
     puzzleMode.hintSquare = null;
     puzzleMode.solutions = computePuzzleSolutions(board, turn);
     puzzleTitleEl.textContent = `Level ${level}: ${puzzle.title}`;
@@ -1149,6 +1488,11 @@
   function handlePuzzleMoveResult(wasCheckmate) {
     if (wasCheckmate) {
       puzzleMode.solvedLevels.add(puzzleMode.level);
+      if (puzzleMode.level + 1 > puzzleMode.unlockedLevel) {
+        puzzleMode.unlockedLevel = puzzleMode.level + 1;
+      }
+      lsSet('chessPuzzleSolved', Array.from(puzzleMode.solvedLevels));
+      lsSet('chessPuzzleUnlocked', puzzleMode.unlockedLevel);
       renderPuzzleLevels();
     } else {
       playSound('fail');
@@ -1260,6 +1604,7 @@
   }
 
   function handleSquareClick(r, c) {
+    if (paused) return;
     if (state.gameOver) return;
     if (net.active && state.turn !== net.myColor) return; // not your turn online
     if (ai.active && (state.turn !== ai.humanColor || ai.thinking)) return; // not your turn vs computer
@@ -1589,6 +1934,7 @@
     onlineConnected.style.display = 'block';
     connectedInfo.textContent = `Room ${net.code} — you are ${net.myColor === 'w' ? 'White' : 'Black'}`;
     onlineStatus.textContent = 'Connected! Board syncs automatically every couple seconds.';
+    startTimer();
   }
 
   async function createRoom() {
@@ -1663,6 +2009,7 @@
     onlineConnected.style.display = 'none';
     onlineStatus.textContent = '';
     joinCodeInput.value = '';
+    stopTimer();
     newGame(true);
   }
 
@@ -1674,6 +2021,7 @@
     aiSetup.style.display = 'block';
     aiPlaying.style.display = 'none';
     aiStatus.textContent = '';
+    stopTimer();
     newGame(true);
   }
 
@@ -1701,72 +2049,80 @@
     aiInfo.textContent = `You are ${ai.humanColor === 'w' ? 'White' : 'Black'} — difficulty: ${diffLabel}`;
     aiStatus.textContent = '';
     newGame(true);
+    startTimer();
   });
 
   leaveAiBtn.addEventListener('click', leaveAiGame);
 
-  // ---------------- UI wiring ----------------
+  // ---------------- Menu / screen navigation ----------------
 
-  function resetPanels() {
+  function hideAllModePanels() {
     onlinePanel.classList.remove('show');
     aiPanel.classList.remove('show');
     puzzlePanel.classList.remove('show');
-    if (net.active) leaveOnline();
-    if (ai.active) leaveAiGame();
-    if (puzzleMode.active) leavePuzzleMode();
   }
 
-  function setActiveModeBtn(activeBtn) {
-    [localModeBtn, onlineModeBtn, aiModeBtn, puzzleModeBtn].forEach(b => b.classList.remove('active'));
-    activeBtn.classList.add('active');
+  function leaveActiveMode() {
+    if (net.active) leaveOnline();
+    if (ai.active) leaveAiGame();
+    if (puzzleMode.active) leavePuzzleMode();
+    stopTimer();
+    if (paused) { paused = false; pauseOverlay.classList.remove('show'); pauseBtn.textContent = '⏸ Pause'; }
   }
 
-  localModeBtn.addEventListener('click', () => {
-    setActiveModeBtn(localModeBtn);
-    resetPanels();
+  function goToMenu() {
+    leaveActiveMode();
+    hideAllModePanels();
+    screenGame.classList.remove('show');
+    screenMenu.classList.add('show');
+  }
+
+  function enterMode(mode) {
+    getAudioCtx();
+    if (musicEnabled) startMusic();
+    hideAllModePanels();
+    screenMenu.classList.remove('show');
+    screenGame.classList.add('show');
+
+    if (mode === 'local') {
+      newGame(false);
+      startTimer();
+    } else if (mode === 'online') {
+      onlinePanel.classList.add('show');
+      // timer starts once the match actually connects (see showConnected)
+    } else if (mode === 'ai') {
+      aiPanel.classList.add('show');
+      // timer starts when Start Game is clicked
+    } else if (mode === 'puzzle') {
+      puzzlePanel.classList.add('show');
+      puzzleMode.active = true;
+      loadPuzzle(puzzleMode.level || 1);
+    }
+  }
+
+  menuBtns.forEach(btn => {
+    btn.addEventListener('click', () => enterMode(btn.dataset.mode));
   });
 
-  onlineModeBtn.addEventListener('click', () => {
-    if (ai.active) leaveAiGame();
-    if (puzzleMode.active) leavePuzzleMode();
-    aiPanel.classList.remove('show');
-    puzzlePanel.classList.remove('show');
-    setActiveModeBtn(onlineModeBtn);
-    onlinePanel.classList.add('show');
-  });
+  backToMenuBtn.addEventListener('click', goToMenu);
 
-  aiModeBtn.addEventListener('click', () => {
-    if (net.active) leaveOnline();
-    if (puzzleMode.active) leavePuzzleMode();
-    onlinePanel.classList.remove('show');
-    puzzlePanel.classList.remove('show');
-    setActiveModeBtn(aiModeBtn);
-    aiPanel.classList.add('show');
-  });
-
-  puzzleModeBtn.addEventListener('click', () => {
-    if (net.active) leaveOnline();
-    if (ai.active) leaveAiGame();
-    onlinePanel.classList.remove('show');
-    aiPanel.classList.remove('show');
-    setActiveModeBtn(puzzleModeBtn);
-    puzzlePanel.classList.add('show');
-    puzzleMode.active = true;
-    loadPuzzle(puzzleMode.level || 1);
-  });
+  pauseBtn.addEventListener('click', togglePause);
 
   hintBtn.addEventListener('click', showPuzzleHint);
   resetPuzzleBtn.addEventListener('click', () => loadPuzzle(puzzleMode.level));
+  puzzlePrevBtn.addEventListener('click', () => changePuzzlePage(-1));
+  puzzleNextBtn.addEventListener('click', () => changePuzzlePage(1));
 
   createRoomBtn.addEventListener('click', createRoom);
   joinRoomBtn.addEventListener('click', joinRoom);
-  cancelRoomBtn.addEventListener('click', leaveOnline);
-  leaveRoomBtn.addEventListener('click', leaveOnline);
+  cancelRoomBtn.addEventListener('click', goToMenu);
+  leaveRoomBtn.addEventListener('click', goToMenu);
 
   newGameBtn.addEventListener('click', () => {
     if (puzzleMode.active) { loadPuzzle(puzzleMode.level); return; }
-    if (ai.active) { newGame(true); return; }
+    if (ai.active) { newGame(true); startTimer(); return; }
     newGame(false);
+    startTimer();
   });
   undoBtn.addEventListener('click', undo);
 
@@ -1777,15 +2133,55 @@
       loadPuzzle(next);
       return;
     }
-    if (ai.active) { newGame(true); return; }
+    if (ai.active) { newGame(true); startTimer(); return; }
     newGame(false);
+    startTimer();
   });
 
   muteBtn.addEventListener('click', () => {
     soundEnabled = !soundEnabled;
+    lsSet('chessSoundEnabled', soundEnabled);
     muteBtn.textContent = soundEnabled ? '🔊 Sound On' : '🔇 Muted';
     if (soundEnabled) { getAudioCtx(); playSound('select'); }
   });
+
+  musicBtn.addEventListener('click', () => {
+    musicEnabled = !musicEnabled;
+    lsSet('chessMusicEnabled', musicEnabled);
+    musicBtn.textContent = musicEnabled ? '🎵 Music On' : '🔇 Music Off';
+    if (musicEnabled) { getAudioCtx(); startMusic(); } else { stopMusic(); }
+  });
+
+  // ---------------- First-run name capture + boot sequence ----------------
+
+  function goToMenuFromBoot() {
+    menuGreeting.textContent = `Welcome back, ${playerName}!`;
+    screenMenu.classList.add('show');
+  }
+
+  nameSubmitBtn.addEventListener('click', () => {
+    const val = nameInput.value.trim();
+    playerName = val || 'Player';
+    lsSet('chessPlayerName', playerName);
+    nameModal.classList.remove('show');
+    getAudioCtx();
+    if (musicEnabled) startMusic();
+    menuGreeting.textContent = `Welcome, ${playerName}!`;
+    screenMenu.classList.add('show');
+  });
+
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') nameSubmitBtn.click();
+  });
+
+  muteBtn.textContent = soundEnabled ? '🔊 Sound On' : '🔇 Muted';
+  musicBtn.textContent = musicEnabled ? '🎵 Music On' : '🔇 Music Off';
+
+  if (playerName) {
+    goToMenuFromBoot();
+  } else {
+    nameModal.classList.add('show');
+  }
 
   render();
 })();
