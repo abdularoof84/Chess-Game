@@ -260,18 +260,23 @@
   #ai-panel h3 { margin: 0 0 10px; font-size: 0.95rem; color: #ddd; }
   #ai-status { font-size: 0.85rem; color: #bbb; margin-top: 4px; min-height: 20px; }
   .diff-btn, .color-btn {
-    background: #4a4038;
-    color: #eee;
-    border: none;
+    background: #33302b;
+    color: #888;
+    border: 2px solid transparent;
     padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.9rem;
+    opacity: 0.7;
+    transition: all 0.15s;
   }
   .diff-btn.active, .color-btn.active {
     background: var(--accent);
     color: #14200f;
-    font-weight: 600;
+    font-weight: 700;
+    opacity: 1;
+    border-color: #cdeab0;
+    box-shadow: 0 0 0 2px rgba(127,176,105,0.35);
   }
   #puzzle-panel {
     background: var(--panel);
@@ -346,12 +351,13 @@
     50% { opacity: 0.9; }
   }
   #layout {
-    display: flex;
+    display: none;
     gap: 24px;
     flex-wrap: wrap;
     justify-content: center;
     align-items: flex-start;
   }
+  #layout.show { display: flex; }
   #board-wrap {
     display: flex;
     flex-direction: column;
@@ -398,7 +404,82 @@
   #endgame-card button {
     margin: 0;
   }
+  #analyze-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  #analyze-row button {
+    background: #3a5f7a;
+    color: #eaf4ff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  #analysis-bar {
+    display: none;
+    width: min(94vw, 496px);
+    margin-top: 10px;
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  #analysis-bar.show { display: block; }
+  #analysis-bar-title {
+    font-size: 0.85rem;
+    color: #bbb;
+    margin-bottom: 8px;
+  }
+  #analysis-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  .chip {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #14200f;
+  }
+  .chip.good { background: #7fb069; }
+  .chip.inaccuracy { background: #e0b84a; }
+  .chip.blunder { background: #d9584f; color: #fff; }
+  .chip.opponent { background: #4a4038; color: #999; border: 1px dashed #6a5f52; }
+  .chip.active { box-shadow: 0 0 0 2px #fff; }
+  #analysis-legend {
+    display: flex;
+    gap: 14px;
+    font-size: 0.75rem;
+    color: #bbb;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  #analysis-legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .legend-dot.actual { background: rgba(90,140,220,0.9); }
+  .legend-dot.suggest { background: var(--accent); border: 1px dashed #14200f; }
+  .legend-dot.opponent { background: #4a4038; border: 1px dashed #6a5f52; }
+  #analysisCloseBtn {
+    background: #4a4038;
+    color: #eee;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.82rem;
+  }
   #board {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(8, min(11vw, 62px));
     grid-template-rows: repeat(8, min(11vw, 62px));
@@ -425,6 +506,15 @@
   .sq.dark { background: var(--dark); }
   .sq.selected { background: var(--highlight) !important; }
   .sq.check { box-shadow: inset 0 0 0 4px var(--check); }
+  .sq.last-move { box-shadow: inset 0 0 0 3px rgba(90,140,220,0.9); }
+  .sq.last-move.selected { box-shadow: inset 0 0 0 3px rgba(90,140,220,0.9); }
+  #board-arrow-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
   .sq .piece {
     line-height: 1;
     pointer-events: none;
@@ -602,14 +692,14 @@
       </div>
       <div class="online-row">
         <button class="diff-btn" data-diff="easy">Easy</button>
-        <button class="diff-btn active" data-diff="medium">Medium</button>
+        <button class="diff-btn active" data-diff="medium">✓ Medium</button>
         <button class="diff-btn" data-diff="hard">Hard</button>
       </div>
       <div class="online-row">
         <span style="font-size:0.85rem; color:#bbb; width:100%;">You play as</span>
       </div>
       <div class="online-row">
-        <button class="color-btn active" data-color="w">White</button>
+        <button class="color-btn active" data-color="w">✓ White</button>
         <button class="color-btn" data-color="b">Black</button>
       </div>
       <div class="online-row">
@@ -651,11 +741,22 @@
           <div id="endgame-title"></div>
           <div id="endgame-sub"></div>
           <button id="playAgainBtn">Play Again</button>
+          <div id="analyze-row"></div>
         </div>
       </div>
       <div id="pause-overlay">
         <div id="pause-card">⏸ Paused</div>
       </div>
+    </div>
+    <div id="analysis-bar">
+      <div id="analysis-bar-title">Game Analysis — tap a move to see it on the board</div>
+      <div id="analysis-legend">
+        <span><i class="legend-dot actual"></i> move played</span>
+        <span><i class="legend-dot suggest"></i> engine's suggestion</span>
+        <span><i class="legend-dot opponent"></i> opponent's move</span>
+      </div>
+      <div id="analysis-chips"></div>
+      <button id="analysisCloseBtn">✕ Close Analysis</button>
     </div>
     <div id="panel">
       <div id="status" class="white">White to move</div>
@@ -703,7 +804,8 @@
     capturedByWhite: [],
     capturedByBlack: [],
     enPassant: null,
-    gameOver: false
+    gameOver: false,
+    lastMove: null
   };
 
   // ---- Online multiplayer state ----
@@ -1480,7 +1582,8 @@
       capturedByWhite: [],
       capturedByBlack: [],
       enPassant: null,
-      gameOver: false
+      gameOver: false,
+      lastMove: null
     };
     puzzleMode.level = level;
     puzzleMode.page = Math.floor((level - 1) / PUZZLES_PER_PAGE);
@@ -1525,6 +1628,211 @@
     puzzleStatusEl.textContent = '';
     hideEndgameOverlay();
     newGame(true);
+  }
+
+  // ---------------- Post-game analysis (reuses the AI's search engine) ----------------
+
+  const analysisState = {
+    active: false,
+    color: null,
+    results: [],
+    selectedIndex: null
+  };
+  const ANALYSIS_DEPTH = 2;
+  const ANALYSIS_INACCURACY_THRESHOLD = 60;
+  const ANALYSIS_BLUNDER_THRESHOLD = 180;
+
+  function reconstructPreMoveState(plyIndex) {
+    if (plyIndex === 0) {
+      return { board: initialBoard(), enPassant: null };
+    }
+    const prev = state.history[plyIndex - 1];
+    return { board: cloneBoard(prev.boardSnapshot), enPassant: prev.enPassant };
+  }
+
+  function runAnalysis(color) {
+    const fullHistory = state.history;
+    const results = [];
+    const opponentColor = color === 'w' ? 'b' : 'w';
+
+    for (let i = 0; i < fullHistory.length; i++) {
+      const entry = fullHistory[i];
+      const { board: preBoard, enPassant: preEnPassant } = reconstructPreMoveState(i);
+
+      if (entry.color !== color) {
+        // Opponent's move — include it for context/continuity, but don't grade it.
+        results.push({
+          plyIndex: i,
+          moveNumber: Math.floor(i / 2) + 1,
+          color: entry.color,
+          from: entry.from,
+          to: entry.to,
+          preBoard,
+          preEnPassant,
+          quality: 'opponent',
+          suggestion: null
+        });
+        continue;
+      }
+
+      const candidates = allLegalMovesOnBoard(preBoard, preEnPassant, color);
+      let bestScore = -Infinity;
+      let bestMove = null;
+      for (const move of candidates) {
+        const { board: candBoard, enPassant: candEP } = simulateMove(preBoard, move);
+        const score = minimax(candBoard, candEP, ANALYSIS_DEPTH, -Infinity, Infinity, color, opponentColor);
+        if (score > bestScore) { bestScore = score; bestMove = move; }
+      }
+
+      const actualScore = minimax(cloneBoard(entry.boardSnapshot), entry.enPassant, ANALYSIS_DEPTH, -Infinity, Infinity, color, opponentColor);
+      const diff = bestScore - actualScore;
+
+      let quality = 'good';
+      let suggestion = null;
+      if (diff > ANALYSIS_BLUNDER_THRESHOLD) {
+        quality = 'blunder';
+        suggestion = bestMove;
+      } else if (diff > ANALYSIS_INACCURACY_THRESHOLD) {
+        quality = 'inaccuracy';
+        suggestion = bestMove;
+      }
+      if (bestMove && (bestMove.from.r === entry.from.r && bestMove.from.c === entry.from.c &&
+          bestMove.to.r === entry.to.r && bestMove.to.c === entry.to.c)) {
+        quality = 'good';
+        suggestion = null;
+      }
+
+      results.push({
+        plyIndex: i,
+        moveNumber: Math.floor(i / 2) + 1,
+        color: entry.color,
+        from: entry.from,
+        to: entry.to,
+        preBoard,
+        preEnPassant,
+        quality,
+        suggestion
+      });
+    }
+    return results;
+  }
+
+  function showAnalysisPly(idx) {
+    const result = analysisState.results[idx];
+    if (!result) return;
+    analysisState.selectedIndex = idx;
+    state.board = cloneBoard(result.preBoard);
+    state.enPassant = result.preEnPassant;
+    state.turn = result.color;
+    state.selected = null;
+    state.legalMoves = [];
+    state.lastMove = { from: result.from, to: result.to };
+    renderAnalysisChips();
+    render();
+  }
+
+  function renderAnalysisChips() {
+    const chipsEl = document.getElementById('analysis-chips');
+    chipsEl.innerHTML = '';
+    analysisState.results.forEach((r, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'chip ' + r.quality;
+      if (idx === analysisState.selectedIndex) btn.classList.add('active');
+      btn.textContent = r.moveNumber + (r.color === 'w' ? '.' : '…');
+      btn.title = `Move ${r.moveNumber} (${r.color === 'w' ? 'White' : 'Black'})`;
+      btn.addEventListener('click', () => showAnalysisPly(idx));
+      chipsEl.appendChild(btn);
+    });
+  }
+
+  function startAnalysis(color) {
+    hideEndgameOverlay();
+    const chipsEl = document.getElementById('analysis-chips');
+    chipsEl.innerHTML = '<span style="color:#999;font-size:0.85rem;">Analyzing…</span>';
+    document.getElementById('analysis-bar').classList.add('show');
+    setTimeout(() => {
+      analysisState.active = true;
+      analysisState.color = color;
+      analysisState.results = runAnalysis(color);
+      analysisState.selectedIndex = null;
+      if (analysisState.results.length > 0) {
+        let defaultIdx = analysisState.results.length - 1;
+        for (let i = analysisState.results.length - 1; i >= 0; i--) {
+          if (analysisState.results[i].color === color) { defaultIdx = i; break; }
+        }
+        showAnalysisPly(defaultIdx);
+      } else {
+        chipsEl.innerHTML = '<span style="color:#999;font-size:0.85rem;">No moves to analyze.</span>';
+        render();
+      }
+    }, 30);
+  }
+
+  function closeAnalysis() {
+    analysisState.active = false;
+    analysisState.results = [];
+    analysisState.selectedIndex = null;
+    document.getElementById('analysis-bar').classList.remove('show');
+    // restore the final position of the real game
+    const lastEntry = state.history[state.history.length - 1];
+    if (lastEntry) {
+      state.board = cloneBoard(lastEntry.boardSnapshot);
+      state.enPassant = lastEntry.enPassant;
+      state.turn = lastEntry.turnAfter;
+      state.lastMove = { from: lastEntry.from, to: lastEntry.to };
+    }
+    state.selected = null;
+    state.legalMoves = [];
+    render();
+  }
+
+  function drawSuggestionArrow(from, to) {
+    const boardElRef = document.getElementById('board');
+    const old = document.getElementById('board-arrow-layer');
+    if (old) old.remove();
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('id', 'board-arrow-layer');
+    svg.setAttribute('viewBox', '0 0 8 8');
+    svg.setAttribute('preserveAspectRatio', 'none');
+
+    const marker = document.createElementNS(ns, 'marker');
+    marker.setAttribute('id', 'arrowhead-suggest');
+    marker.setAttribute('markerWidth', '3');
+    marker.setAttribute('markerHeight', '3');
+    marker.setAttribute('refX', '1.5');
+    marker.setAttribute('refY', '1.5');
+    marker.setAttribute('orient', 'auto');
+    const arrowPath = document.createElementNS(ns, 'path');
+    arrowPath.setAttribute('d', 'M0,0 L3,1.5 L0,3 Z');
+    arrowPath.setAttribute('fill', '#7fb069');
+    marker.appendChild(arrowPath);
+    const defs = document.createElementNS(ns, 'defs');
+    defs.appendChild(marker);
+    svg.appendChild(defs);
+
+    const x1 = from.c + 0.5, y1 = from.r + 0.5;
+    const x2 = to.c + 0.5, y2 = to.r + 0.5;
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const shortenEnd = 0.32;
+    const ex = x2 - (dx / len) * shortenEnd;
+    const ey = y2 - (dy / len) * shortenEnd;
+
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', x1);
+    line.setAttribute('y1', y1);
+    line.setAttribute('x2', ex);
+    line.setAttribute('y2', ey);
+    line.setAttribute('stroke', '#7fb069');
+    line.setAttribute('stroke-width', '0.14');
+    line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('stroke-dasharray', '0.22 0.16');
+    line.setAttribute('marker-end', 'url(#arrowhead-suggest)');
+    line.setAttribute('opacity', '0.9');
+    svg.appendChild(line);
+
+    boardElRef.appendChild(svg);
   }
 
   function makeMove(from, to, moveMeta, promotionChoice) {
@@ -1580,9 +1888,12 @@
       capturedByWhite: [...state.capturedByWhite],
       capturedByBlack: [...state.capturedByBlack],
       turnAfter: nextTurn,
-      checkmate, stalemate
+      checkmate, stalemate,
+      from: { r: from.r, c: from.c },
+      to: { r: to.r, c: to.c }
     });
 
+    state.lastMove = { from: { r: from.r, c: from.c }, to: { r: to.r, c: to.c } };
     state.turn = nextTurn;
     state.selected = null;
     state.legalMoves = [];
@@ -1676,6 +1987,31 @@
     return color === 'w' ? 'White' : 'Black';
   }
 
+  function populateAnalyzeRow() {
+    const row = document.getElementById('analyze-row');
+    row.innerHTML = '';
+    if (ai.active) {
+      const btn = document.createElement('button');
+      btn.textContent = '🔍 Analyze Game';
+      btn.addEventListener('click', () => startAnalysis(ai.humanColor));
+      row.appendChild(btn);
+    } else if (net.active) {
+      const btn = document.createElement('button');
+      btn.textContent = '🔍 Analyze Game';
+      btn.addEventListener('click', () => startAnalysis(net.myColor));
+      row.appendChild(btn);
+    } else {
+      const wBtn = document.createElement('button');
+      wBtn.textContent = '🔍 Analyze White';
+      wBtn.addEventListener('click', () => startAnalysis('w'));
+      const bBtn = document.createElement('button');
+      bBtn.textContent = '🔍 Analyze Black';
+      bBtn.addEventListener('click', () => startAnalysis('b'));
+      row.appendChild(wBtn);
+      row.appendChild(bBtn);
+    }
+  }
+
   function showEndgameOverlay(last) {
     if (puzzleMode.active) {
       if (last && last.checkmate) {
@@ -1706,6 +2042,7 @@
       endgameSub.textContent = "It's a draw — well played both sides.";
     }
     playAgainBtn.textContent = 'Play Again';
+    populateAnalyzeRow();
     endgameOverlay.classList.add('show');
   }
 
@@ -1725,6 +2062,9 @@
         if (state.selected && state.selected.r===r && state.selected.c===c) sq.classList.add('selected');
         if (kingInCheckPos && kingInCheckPos.r===r && kingInCheckPos.c===c) sq.classList.add('check');
         if (puzzleMode.hintSquare && puzzleMode.hintSquare.r===r && puzzleMode.hintSquare.c===c) sq.classList.add('hint');
+        if (state.lastMove && ((state.lastMove.from.r===r && state.lastMove.from.c===c) || (state.lastMove.to.r===r && state.lastMove.to.c===c))) {
+          sq.classList.add('last-move');
+        }
 
         const piece = state.board[r][c];
         if (piece) {
@@ -1745,6 +2085,13 @@
       }
     }
 
+    if (analysisState.active && analysisState.selectedIndex !== null) {
+      const result = analysisState.results[analysisState.selectedIndex];
+      if (result && result.suggestion) {
+        drawSuggestionArrow(result.suggestion.from, result.suggestion.to);
+      }
+    }
+
     filesEl.innerHTML = '';
     for (const f of 'abcdefgh') {
       const s = document.createElement('span');
@@ -1753,7 +2100,7 @@
     }
 
     statusEl.classList.remove('white','black','over');
-    if (state.gameOver) {
+    if (state.gameOver && !analysisState.active) {
       const last = state.history[state.history.length-1];
       if (last && last.checkmate) {
         const winner = last.color === 'w' ? 'White' : 'Black';
@@ -1763,7 +2110,7 @@
       }
       statusEl.classList.add('over');
       showEndgameOverlay(last);
-    } else {
+    } else if (!state.gameOver) {
       hideEndgameOverlay();
       const inChk = inCheck(state.board, state.turn, state.enPassant);
       let turnText = (state.turn === 'w' ? 'White' : 'Black') + ' to move' + (inChk ? ' — Check!' : '');
@@ -1805,8 +2152,13 @@
       capturedByWhite: [],
       capturedByBlack: [],
       enPassant: null,
-      gameOver: false
+      gameOver: false,
+      lastMove: null
     };
+    analysisState.active = false;
+    analysisState.results = [];
+    analysisState.selectedIndex = null;
+    document.getElementById('analysis-bar').classList.remove('show');
     ai.thinking = false;
     render();
     if (net.active && !skipNet) pushStateToRoom();
@@ -1943,6 +2295,7 @@
     onlineConnected.style.display = 'block';
     connectedInfo.textContent = `Room ${net.code} — you are ${net.myColor === 'w' ? 'White' : 'Black'}`;
     onlineStatus.textContent = 'Connected! Board syncs automatically every couple seconds.';
+    document.getElementById('layout').classList.add('show');
     startTimer();
   }
 
@@ -2018,6 +2371,7 @@
     onlineConnected.style.display = 'none';
     onlineStatus.textContent = '';
     joinCodeInput.value = '';
+    document.getElementById('layout').classList.remove('show');
     stopTimer();
     newGame(true);
   }
@@ -2030,22 +2384,30 @@
     aiSetup.style.display = 'block';
     aiPlaying.style.display = 'none';
     aiStatus.textContent = '';
+    document.getElementById('layout').classList.remove('show');
     stopTimer();
     newGame(true);
   }
 
+  function markSelected(group, selectedBtn) {
+    group.forEach(b => {
+      b.classList.remove('active');
+      b.textContent = b.textContent.replace(/^✓ /, '');
+    });
+    selectedBtn.classList.add('active');
+    selectedBtn.textContent = '✓ ' + selectedBtn.textContent;
+  }
+
   diffBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      diffBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      markSelected(diffBtns, btn);
       ai.difficulty = btn.dataset.diff;
     });
   });
 
   colorBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      colorBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      markSelected(colorBtns, btn);
       ai.humanColor = btn.dataset.color;
     });
   });
@@ -2057,6 +2419,7 @@
     const diffLabel = ai.difficulty.charAt(0).toUpperCase() + ai.difficulty.slice(1);
     aiInfo.textContent = `You are ${ai.humanColor === 'w' ? 'White' : 'Black'} — difficulty: ${diffLabel}`;
     aiStatus.textContent = '';
+    document.getElementById('layout').classList.add('show');
     newGame(true);
     startTimer();
   });
@@ -2072,6 +2435,7 @@
   }
 
   function leaveActiveMode() {
+    if (analysisState.active) closeAnalysis();
     if (net.active) leaveOnline();
     if (ai.active) leaveAiGame();
     if (puzzleMode.active) leavePuzzleMode();
@@ -2092,17 +2456,20 @@
     hideAllModePanels();
     screenMenu.classList.remove('show');
     screenGame.classList.add('show');
+    const layoutEl = document.getElementById('layout');
 
     if (mode === 'local') {
+      layoutEl.classList.add('show');
       newGame(false);
       startTimer();
     } else if (mode === 'online') {
+      layoutEl.classList.remove('show'); // shown once the match connects, see showConnected()
       onlinePanel.classList.add('show');
-      // timer starts once the match actually connects (see showConnected)
     } else if (mode === 'ai') {
+      layoutEl.classList.remove('show'); // shown once Start Game is clicked
       aiPanel.classList.add('show');
-      // timer starts when Start Game is clicked
     } else if (mode === 'puzzle') {
+      layoutEl.classList.add('show');
       puzzlePanel.classList.add('show');
       puzzleMode.active = true;
       loadPuzzle(puzzleMode.level || 1);
@@ -2146,6 +2513,8 @@
     newGame(false);
     startTimer();
   });
+
+  document.getElementById('analysisCloseBtn').addEventListener('click', closeAnalysis);
 
   muteBtn.addEventListener('click', () => {
     soundEnabled = !soundEnabled;
